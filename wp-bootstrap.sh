@@ -104,3 +104,5 @@ read -s admin_pass
 
 wp db create
 wp core install --url=$site_url --title=$title --admin_user=$user --admin_email=$admin_email --admin_password=$admin_pass
+
+echo ".env" > ../.gitignore
