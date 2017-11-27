@@ -56,6 +56,15 @@ create_env_file "../.env.example"
 create_env_file "../.env" $db_host $db_user $db_pass $db_name
 
 
+function create_wpcli_file {
+	echo "path: public_html/" > $1
+}
+
+echo "Creating wp-cli file"
+
+create_wpcli_file "../wp-cli.yml"
+
+
 echo "wp config create --dbname=$db_name --dbuser=$db_user --dbpass=$db_pass --dbhost=$db_host --dbprefix=$db_prefix --dbcharset=utf8mb4 --dbcollate=utf8mb4_general_ci"
 
 wp config create --dbname=$db_name --dbuser=$db_user --dbpass=$db_pass --dbhost=$db_host --dbprefix=$db_prefix --dbcharset=utf8mb4 --dbcollate=utf8mb4_general_ci
