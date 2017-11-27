@@ -1,7 +1,15 @@
 #!/usr/bin/env bash
 
-echo "Enter the name of the project directory: "
-read name
+assets_dir="assets"
+
+name=$1
+dir_name=`echo "$name" | perl -pe 's/^(?:.*[^\w\-])?([\w\-]+)[^\w\-]?$/\1/'`
+
+
+if [ -z $name ]; then
+	echo "Usage: wp-bootstrap project_dir"
+	exit 1
+fi
 
 if [ -d $name ]; then
 	echo "Dir $name already exists"
@@ -18,21 +26,21 @@ mkdir public_html && cd public_html
 wp core download
 
 echo "Please enter database info"
-echo "Host: "
-read db_host
+echo "=========================="
 
-echo "User: "
-read db_user
+read -p "Host: [localhost] " db_host
+db_host=${db_host:-localhost}
 
-echo "Pass (hidden): "
-read -s db_pass
+read -p  "User: " db_user  
 
-echo "Schema name: "
-read db_name
+read -s -p "Pass (hidden): " db_pass
+echo
 
-echo "Database Table Prefix: "
-read db_prefix
+read -p "Schema name: [$dir_name] " db_name
+db_name=${db_name:-$dir_name}
 
+read -p "Database Table Prefix: [wp_] " db_prefix
+db_prefix=${db_prefix:-wp_}
 
 function create_env_file {
 	echo "; MySQL Config" > $1
@@ -42,14 +50,18 @@ function create_env_file {
 	echo "db_name=$5" >> $1
 }
 
+echo "Creating .env files"
+
 create_env_file "../.env.example"
 create_env_file "../.env" $db_host $db_user $db_pass $db_name
+
+
+echo "wp config create --dbname=$db_name --dbuser=$db_user --dbpass=$db_pass --dbhost=$db_host --dbprefix=$db_prefix --dbcharset=utf8mb4 --dbcollate=utf8mb4_general_ci"
 
 wp config create --dbname=$db_name --dbuser=$db_user --dbpass=$db_pass --dbhost=$db_host --dbprefix=$db_prefix --dbcharset=utf8mb4 --dbcollate=utf8mb4_general_ci
 
 read -r -d '' env_func <<- DotEnvFunc
-
-
+<?php 
 
 function env(\$name, \$default = null) {
         static \$env_data;
@@ -69,10 +81,16 @@ function env(\$name, \$default = null) {
                 return \$default;
         }
 }
+
+// END Tech.marketing Config Bootstrap code
+
 DotEnvFunc
 
-mv wp-config.php ../wp-config.php
-echo "$env_func" >> ../wp-config.php
+echo "Building wp-config"
+
+echo "$env_func" > ../wp-config.php
+tail -n +2 wp-config.php >> ../wp-config.php
+rm -f wp-config.php
 
 
 function const_env {
@@ -87,22 +105,56 @@ const_env DB_HOST db_host ../wp-config.php
 rm ../wp-config.php.bak
 
 echo "Now, Initialing database"
-echo "Site URL: "
-read site_url
+read -p "Site URL: " site_url
 
-echo "Site Title: "
-read title
+read -p "Site Title: " title
 
-echo "Admin Username: "
-read user
+read -p "Admin Username: " user
 
-echo "Admin Email: "
-read admin_email
+read -p "Admin Email: " admin_email
 
-echo "Admin Password (hidden): "
-read -s admin_pass
-
-wp db create
-wp core install --url=$site_url --title=$title --admin_user=$user --admin_email=$admin_email --admin_password=$admin_pass
+read -s -p "Admin Password (hidden): " admin_pass
+echo
 
 echo ".env" > ../.gitignore
+echo "$assets_dir/uploads/*" >> ../.gitignore
+
+mv wp-content $assets_dir
+
+wp db create
+echo "wp core install --url=$site_url --title=$title --admin_user=$user --admin_email=$admin_email --admin_password=$admin_pass"
+wp core install --url="$site_url" --title="$title" --admin_user="$user" --admin_email="$admin_email" --admin_password="$admin_pass"
+
+read -r -d '' content_dir_php <<-PHPBlock
+<?php
+
+// BEGIN Tech.marketing Config Bootstrap code
+
+if (!defined('WP_CLI')) {
+        define('WP_CLI', false);
+}
+
+define ('WP_CONTENT_FOLDERNAME', '$assets_dir');
+
+
+define ('WP_CONTENT_DIR', ABSPATH . WP_CONTENT_FOLDERNAME) ;
+
+if(WP_CLI) {
+        define('WP_SITEURL', '/');
+} else {
+        define('WP_SITEURL', 'http://' . \$_SERVER['HTTP_HOST'] . '/');
+}
+
+define('WP_CONTENT_URL', WP_SITEURL . WP_CONTENT_FOLDERNAME);
+
+PHPBlock
+
+echo "$content_dir_php" > .tmp.php
+tail -n +2 ../wp-config.php >> .tmp.php
+mv .tmp.php ../wp-config.php
+
+echo "Removing unneccessary themes"
+wp theme list --format=csv | grep inactive | awk -F',' '{print $1}' | xargs wp theme uninstall
+
+echo "Removing unneccessary plugins"
+wp plugin list --format=csv | grep inactive | awk -F',' '{print $1}' | xargs wp plugin uninstall
