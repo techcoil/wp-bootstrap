@@ -125,8 +125,8 @@ read -p "Admin Email: " admin_email
 read -s -p "Admin Password (hidden): " admin_pass
 echo
 
-echo ".env" > ../.gitignore
-echo "$assets_dir/uploads/*" >> ../.gitignore
+echo "/.env" > ../.gitignore
+echo "/$assets_dir/uploads/*" >> ../.gitignore
 
 mv wp-content $assets_dir
 
