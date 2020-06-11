@@ -3,6 +3,7 @@
 
 #### Run with docker
 ```
-docker run --rm -it -v $PWD:/app . NAME_OF_THE_PROJECT
+docker build --tag wp-bootstrap .
+docker run --rm -it -v $PWD:/app wp-bootstrap NAME_OF_THE_PROJECT
 ```
 
