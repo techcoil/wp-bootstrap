@@ -8,6 +8,5 @@ RUN apk add perl
 
 USER www-data
 WORKDIR /app
-VOLUME /app
 
 ENTRYPOINT ["/bin/bash", "/usr/local/bin/wp-bootstrap.sh"]
