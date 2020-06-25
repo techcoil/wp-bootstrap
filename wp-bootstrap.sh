@@ -143,6 +143,8 @@ mv wp-content $assets_dir
 wp db create
 echo "wp core install --url=$site_url --title=$title --skip-email --admin_user=$user --admin_email=$admin_email --admin_password=*****"
 wp core install --url="$site_url" --title="$title" --skip-email --admin_user="$user" --admin_email="$admin_email" --admin_password="$admin_pass"
+# Empty default WordPress blog description
+wp option update blogdescription ''
 
 read -r -d '' content_dir_php <<-PHPBlock
 <?php
