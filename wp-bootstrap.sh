@@ -43,11 +43,14 @@ read -p "Database Table Prefix: [wp_] " db_prefix
 db_prefix=${db_prefix:-wp_}
 
 function create_env_file {
-	echo "; MySQL Config" > $1
-	echo "db_host=$2" >> $1
-	echo "db_user=$3" >> $1
-	echo "db_pass=$4" >> $1
-	echo "db_name=$5" >> $1
+  echo "WP_DEBUG=0" > $1
+  echo "CONTENT_VERSION=1" >> $1
+  echo "" >> $1
+	echo "# MySQL Config" >> $1
+	echo "WORDPRESS_DB_HOST=$2" >> $1
+	echo "WORDPRESS_DB_USER=$3" >> $1
+	echo "WORDPRESS_DB_PASS=$4" >> $1
+	echo "WORDPRESS_DB_NAME=$5" >> $1
 }
 
 echo "Creating .env files"
@@ -65,9 +68,9 @@ echo "Creating wp-cli file"
 create_wpcli_file "../wp-cli.yml"
 
 
-echo "wp config create --dbname=$db_name --dbuser=$db_user --dbpass=$db_pass --dbhost=$db_host --dbprefix=$db_prefix --dbcharset=utf8mb4 --dbcollate=utf8mb4_general_ci"
+echo "wp config create --dbname=$db_name --dbuser=$db_user --dbpass=****** --dbhost=$db_host --dbprefix=$db_prefix"
 
-wp config create --dbname=$db_name --dbuser=$db_user --dbpass=$db_pass --dbhost=$db_host --dbprefix=$db_prefix --dbcharset=utf8mb4 --dbcollate=utf8mb4_general_ci
+wp config create --dbname=$db_name --dbuser=$db_user --dbpass=$db_pass --dbhost=$db_host --dbprefix=$db_prefix
 
 read -r -d '' env_func <<- DotEnvFunc
 <?php 
@@ -103,13 +106,20 @@ rm -f wp-config.php
 
 
 function const_env {
-        sed -i.bak "s/\(^define[\(] \\'$1\\', \)\\'.*\\'/\\1env('$2')/g" $3
+    if [ ! -z "$4" ]; then
+        default=", ${4}"
+    else
+        default=""
+    fi
+        sed -i.bak "s/\(^define[\(] \\'$1\\', \)\\'.*\\'/\\1env('$2'${default})/g" $3
 }
 
-const_env DB_PASSWORD db_pass ../wp-config.php
-const_env DB_NAME db_name ../wp-config.php
-const_env DB_USER db_user ../wp-config.php
-const_env DB_HOST db_host ../wp-config.php
+const_env DB_HOST WORDPRESS_DB_HOST ../wp-config.php
+const_env DB_USER WORDPRESS_DB_USER ../wp-config.php
+const_env DB_PASSWORD WORDPRESS_DB_PASS ../wp-config.php
+const_env DB_NAME WORDPRESS_DB_NAME ../wp-config.php
+const_env DB_COLLATE WORDPRESS_DB_COLLATE ../wp-config.php "'utf8mb4_general_ci'"
+const_env DB_CHARSET WORDPRESS_DB_CHARSET ../wp-config.php "'utf8mb4'"
 
 rm ../wp-config.php.bak
 
@@ -143,15 +153,21 @@ if (!defined('WP_CLI')) {
         define('WP_CLI', false);
 }
 
-define ('WP_CONTENT_FOLDERNAME', '$assets_dir');
 
+define('WP_DEBUG', boolval(env('WP_DEBUG', false)));
+define('CLIENT_VERSION', env('CLIENT_VERSION', 1));
+
+define ('WP_CONTENT_FOLDERNAME', '$assets_dir');
 
 define ('WP_CONTENT_DIR', ABSPATH . WP_CONTENT_FOLDERNAME) ;
 
 if(WP_CLI) {
         define('WP_SITEURL', '/');
+        \$_SERVER['HTTP_HOST'] = '';
+        \$_SERVER['SERVER_NAME'] = '';
+        \$_SERVER['REMOTE_ADDR'] = '127.0.0.1';
 } else {
-        define('WP_SITEURL', 'http://' . \$_SERVER['HTTP_HOST'] . '/');
+        define('WP_SITEURL', 'https://' . \$_SERVER['HTTP_HOST'] . '/');
 }
 
 define('WP_CONTENT_URL', WP_SITEURL . WP_CONTENT_FOLDERNAME);
